@@ -1,0 +1,12 @@
+streamlit
+langchain
+langgraph
+google-generativeai
+reportlab
+tavily-python
+langchain-google-genai
+langchain-community
+python-dotenv
+markdown
+weasyprint
+pypdf
