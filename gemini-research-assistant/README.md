@@ -106,3 +106,8 @@ Key dependencies include:
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Todo
+- Robust source and citation attribution
+- Add support for image generation for any data points
+- Add ability to add links for context
