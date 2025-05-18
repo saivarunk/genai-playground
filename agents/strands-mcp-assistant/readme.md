@@ -52,4 +52,3 @@ docker build -t mcp/perplexity-ask:latest -f Dockerfile .
 ```bash
 streamlit run app.py
 ```
-This should start the Streamlit App and 
