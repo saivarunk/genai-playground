@@ -6,6 +6,7 @@ Jarvis is an AI agent specialized in creating rich, visually appealing presentat
 
 - 📊 **PDF Analysis**: Upload PDFs and get key insights extracted automatically
 - 🚀 **Smart Content**: Creates 4-6 well-structured slides with tables, lists, and visual elements
+- 📄 **PDF Export**: Convert presentations to downloadable PDF files
 
 ## Setup
 
@@ -33,6 +34,12 @@ npm install
 
 ## Usage
 
-```
+```bash
 npm run dev
 ```
+
+## Requirements
+
+- Node.js 18+
+- Google Gemini API key
+- Marp CLI (automatically installed via dependencies)
