@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/genai": "^1.4.0",
     "@google/generative-ai": "^0.24.1",
     "@langchain/core": "^0.3.57",
     "@langchain/google-genai": "^0.2.10",
