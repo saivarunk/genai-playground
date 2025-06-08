@@ -5,9 +5,6 @@ import { existsSync } from 'fs';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-  'application/vnd.ms-excel', // .xls
-  'text/csv', // .csv
   'application/pdf', // .pdf
 ];
 
@@ -34,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: 'File type not supported. Please upload xlsx, csv, or pdf files.' },
+        { error: 'Only PDF files are supported. For spreadsheets or data files, please convert them to PDF first.' },
         { status: 400 }
       );
     }
@@ -91,7 +88,8 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     message: 'File Upload API',
-    supportedTypes: ['xlsx', 'xls', 'csv', 'pdf'],
+    supportedTypes: ['pdf'],
     maxSize: '10MB',
+    note: 'For spreadsheets or data files, please convert them to PDF first.',
   });
 } 

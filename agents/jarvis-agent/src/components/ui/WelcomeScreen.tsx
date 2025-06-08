@@ -8,17 +8,22 @@ export default function WelcomeScreen() {
       </div>
       <h2 className="text-2xl font-semibold text-gray-900 mb-2">Welcome to Jarvis</h2>
       <p className="text-gray-600 text-center max-w-md">
-        Upload your files and describe what kind of presentation you'd like to create. I'll help you generate beautiful, professional slide presentations.
+        Upload or drag & drop your PDF files and describe what kind of presentation you'd like to create. I'll help you generate simple presentations.
       </p>
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
         <div className="p-4 border border-gray-200 rounded-lg">
-          <h3 className="font-medium text-gray-900 mb-2">📊 Data Analysis</h3>
-          <p className="text-sm text-gray-600">Upload spreadsheets and create data-driven presentations</p>
+          <h3 className="font-medium text-gray-900 mb-2">📄 PDF Documents</h3>
+          <p className="text-sm text-gray-600">Upload PDF reports, papers, or documents for analysis</p>
         </div>
         <div className="p-4 border border-gray-200 rounded-lg">
-          <h3 className="font-medium text-gray-900 mb-2">📄 Document Summary</h3>
-          <p className="text-sm text-gray-600">Transform documents into compelling slide decks</p>
+          <h3 className="font-medium text-gray-900 mb-2">📊 Data as PDF</h3>
+          <p className="text-sm text-gray-600">Convert spreadsheets to PDF first, then upload for data-driven presentations</p>
         </div>
+      </div>
+      <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+        <p className="text-sm text-blue-800">
+          <strong>💡 Tip:</strong> For Excel/CSV files, export them as PDF first. Most spreadsheet apps have a "Export as PDF" or "Print to PDF" option.
+        </p>
       </div>
     </div>
   );

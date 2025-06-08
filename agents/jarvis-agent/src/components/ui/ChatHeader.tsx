@@ -9,7 +9,7 @@ export default function ChatHeader() {
         
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Jarvis</h1>
-          <p className="text-sm text-gray-500">Create presentations from your files and ideas</p>
+          <p className="text-sm text-gray-500">Create presentations from your PDF files and ideas</p>
         </div>
       </div>
     </div>

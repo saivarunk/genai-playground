@@ -15,6 +15,7 @@ export default function ChatInput({ input, setInput, isLoading, onSubmit, onKeyD
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
@@ -39,14 +40,11 @@ export default function ChatInput({ input, setInput, isLoading, onSubmit, onKeyD
       }
 
       const allowedTypes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-excel',
-        'text/csv',
         'application/pdf'
       ];
 
       if (!allowedTypes.includes(file.type)) {
-        alert(`File ${file.name} is not supported. Please upload xlsx, csv, or pdf files.`);
+        alert(`File ${file.name} is not supported. Only PDF files are accepted. For spreadsheets or data files, please convert them to PDF first.`);
         continue;
       }
 
@@ -125,6 +123,35 @@ export default function ChatInput({ input, setInput, isLoading, onSubmit, onKeyD
     setAttachments(prev => prev.filter(att => att.id !== id));
   };
 
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files);
+    }
+  };
+
   return (
     <div className="border-t border-gray-200 bg-white p-4">
       <div className="max-w-4xl mx-auto">
@@ -160,12 +187,16 @@ export default function ChatInput({ input, setInput, isLoading, onSubmit, onKeyD
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".xlsx,.xls,.csv,.pdf"
+            accept=".pdf"
             onChange={handleFileInputChange}
             className="hidden"
           />
           
-          <div className="relative flex items-end bg-white border border-gray-300 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 focus-within:shadow-md focus-within:border-blue-500">
+          <div className={`relative flex items-end bg-white border rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 focus-within:shadow-md ${
+            isDragOver 
+              ? 'border-blue-500 bg-blue-50 shadow-md' 
+              : 'border-gray-300 focus-within:border-blue-500'
+          }`}>
             {/* File Upload Button */}
             <button
               type="button"
@@ -176,7 +207,7 @@ export default function ChatInput({ input, setInput, isLoading, onSubmit, onKeyD
                   ? 'text-gray-300 cursor-not-allowed'
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
               }`}
-              title="Upload files (xlsx, csv, pdf)"
+              title="Upload PDF files"
             >
               {isUploading ? (
                 <div className="w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
@@ -188,17 +219,30 @@ export default function ChatInput({ input, setInput, isLoading, onSubmit, onKeyD
             </button>
             
             {/* Text Input */}
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Message Jarvis..."
-              className="flex-1 resize-none border-0 bg-transparent px-3 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 max-h-48 min-h-[20px]"
-              rows={1}
-              disabled={isLoading}
-              style={{ lineHeight: '1.5' }}
-            />
+            <div className="flex-1 relative">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleTextareaChange}
+                onKeyDown={handleKeyDown}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                placeholder={isDragOver ? "Drop PDF files here..." : "Message Jarvis..."}
+                className="w-full resize-none border-0 bg-transparent px-3 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 max-h-48 min-h-[20px]"
+                rows={1}
+                disabled={isLoading}
+                style={{ lineHeight: '1.5' }}
+              />
+              {isDragOver && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div className="bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg px-4 py-2">
+                    <p className="text-blue-700 text-sm font-medium">Drop PDF files here</p>
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Send Button */}
             <button
@@ -223,7 +267,8 @@ export default function ChatInput({ input, setInput, isLoading, onSubmit, onKeyD
           <div className="mt-2 text-center">
             <span className="text-xs text-gray-500">
               Press <kbd className="px-1 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded">⏎</kbd> to send, 
-              <kbd className="px-1 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded ml-1">⇧⏎</kbd> for new line
+              <kbd className="px-1 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded ml-1">⇧⏎</kbd> for new line, 
+              or drag & drop PDF files
             </span>
           </div>
         </form>
