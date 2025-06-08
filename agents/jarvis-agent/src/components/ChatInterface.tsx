@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Message } from '@/lib/types';
+import { Message, FileAttachment } from '@/lib/types';
 import ChatHeader from './ui/ChatHeader';
 import MessageList from './ui/MessageList';
 import ChatInput from './ui/ChatInput';
@@ -98,14 +98,15 @@ export default function ChatInterface() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, attachments?: FileAttachment[]) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && (!attachments || attachments.length === 0)) || isLoading) return;
 
     const newMessage: Message = {
       role: 'user',
       content: input,
       timestamp: new Date(),
+      attachments: attachments || [],
     };
 
     setMessages((prev) => [...prev, newMessage]);
@@ -116,17 +117,20 @@ export default function ChatInterface() {
     const updatedMessages = [...messages, newMessage];
     
     try {
+      const requestBody = {
+        messages: updatedMessages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          attachments: msg.attachments
+        }))
+      };
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messages: updatedMessages.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          }))
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();

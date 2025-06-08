@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     // Use the full conversation history if provided, otherwise use single message
     const conversationHistory = messages || [{ role: 'user', content: message }];
     
-    // Run the Jarvis agent with full context
+    // Run the Jarvis agent with full context (including attachments)
     const result = await runJarvisAgent(conversationHistory);
     
     // Extract the AI response

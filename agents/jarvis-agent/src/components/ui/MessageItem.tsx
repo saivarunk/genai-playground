@@ -1,6 +1,7 @@
 import { Message } from '@/lib/types';
 import Avatar from './Avatar';
 import PresentationCard from './PresentationCard';
+import FileAttachment from './FileAttachment';
 
 interface MessageItemProps {
   message: Message;
@@ -20,6 +21,15 @@ export default function MessageItem({ message, onPresentationClick }: MessageIte
         
         {/* Message Content */}
         <div className="flex-1 min-w-0">
+          {/* File Attachments */}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="mb-2 space-y-1">
+              {message.attachments.map((attachment) => (
+                <FileAttachment key={attachment.id} attachment={attachment} />
+              ))}
+            </div>
+          )}
+          
           {isPresentationCard ? (
             (() => {
               const cardData = JSON.parse(message.content.replace('PRESENTATION_CARD:', ''));
