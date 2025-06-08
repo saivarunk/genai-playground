@@ -15,6 +15,7 @@ export default function ChatInterface() {
   const [rawMarkdown, setRawMarkdown] = useState<string>('');
   const [showSidebar, setShowSidebar] = useState(false);
   const [activeTab, setActiveTab] = useState<'presentation' | 'markdown'>('presentation');
+  const [enableStreaming, setEnableStreaming] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -113,6 +114,16 @@ export default function ChatInterface() {
     setInput('');
     setIsLoading(true);
 
+    // Add placeholder assistant message only for streaming
+    if (enableStreaming) {
+      const placeholderMessage: Message = {
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, placeholderMessage]);
+    }
+
     // Call the Jarvis API with full conversation history
     const updatedMessages = [...messages, newMessage];
     
@@ -122,7 +133,8 @@ export default function ChatInterface() {
           role: msg.role,
           content: msg.content,
           attachments: msg.attachments
-        }))
+        })),
+        stream: enableStreaming // Enable streaming based on toggle
       };
       
       const response = await fetch('/api/chat', {
@@ -133,36 +145,119 @@ export default function ChatInterface() {
         body: JSON.stringify(requestBody),
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      if (response.ok) {
-        const agentResponse: Message = {
-          role: 'assistant',
-          content: data.message,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, agentResponse]);
-        
-        console.log('About to check for presentation in message:', data.message.substring(0, 100) + '...');
-        
-        // Check if the response contains presentation content
-        await checkAndGeneratePresentation(data.message);
+      if (response.headers.get('content-type')?.includes('text/event-stream')) {
+        // Handle streaming response
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let streamedContent = '';
+
+        if (reader) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n');
+
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.slice(6));
+                    
+                    if (data.type === 'content' && data.content) {
+                      streamedContent += data.content;
+                      
+                      // Update the last assistant message with streamed content
+                      setMessages((prev) => {
+                        const newMessages = [...prev];
+                        const lastMessage = newMessages[newMessages.length - 1];
+                        if (lastMessage && lastMessage.role === 'assistant') {
+                          lastMessage.content = streamedContent;
+                        }
+                        return newMessages;
+                      });
+                    } else if (data.type === 'end') {
+                      // Stream completed
+                      console.log('Stream completed');
+                      
+                      // Check if the response contains presentation content
+                      if (streamedContent) {
+                        await checkAndGeneratePresentation(streamedContent);
+                      }
+                      break;
+                    } else if (data.type === 'error') {
+                      throw new Error(data.error || 'Stream error');
+                    }
+                  } catch (parseError) {
+                    console.error('Error parsing streaming data:', parseError);
+                  }
+                }
+              }
+            }
+          } finally {
+            reader.releaseLock();
+          }
+        }
       } else {
+        // Handle non-streaming response (fallback)
+        const data = await response.json();
+        
+        if (response.ok) {
+          if (enableStreaming) {
+            // Update the placeholder message with the complete response
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              const lastMessage = newMessages[newMessages.length - 1];
+              if (lastMessage && lastMessage.role === 'assistant') {
+                lastMessage.content = data.message;
+              }
+              return newMessages;
+            });
+          } else {
+            // Add new assistant message for non-streaming
+            const agentResponse: Message = {
+              role: 'assistant',
+              content: data.message,
+              timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, agentResponse]);
+          }
+          
+          console.log('About to check for presentation in message:', data.message.substring(0, 100) + '...');
+          
+          // Check if the response contains presentation content
+          await checkAndGeneratePresentation(data.message);
+        } else {
+          throw new Error(data.error || 'Unknown error');
+        }
+      }
+    } catch (error) {
+      console.error('Error calling Jarvis API:', error);
+      
+      if (enableStreaming) {
+        // Update the placeholder message with error
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage && lastMessage.role === 'assistant') {
+            lastMessage.content = `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          }
+          return newMessages;
+        });
+      } else {
+        // Add new error message for non-streaming
         const errorResponse: Message = {
           role: 'assistant',
-          content: `Sorry, I encountered an error: ${data.error || 'Unknown error'}`,
+          content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, errorResponse]);
       }
-    } catch (error) {
-      console.error('Error calling Jarvis API:', error);
-      const errorResponse: Message = {
-        role: 'assistant',
-        content: 'Sorry, I\'m having trouble connecting right now. Please try again.',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorResponse]);
     }
 
     setIsLoading(false);
@@ -188,7 +283,10 @@ export default function ChatInterface() {
       {/* Main Chat Area */}
       <div className={`flex flex-col transition-all duration-300 ${showSidebar ? 'w-1/2' : 'w-full'}`}>
         {/* Header */}
-        <ChatHeader />
+        <ChatHeader 
+          enableStreaming={enableStreaming}
+          onStreamingToggle={setEnableStreaming}
+        />
 
         {/* Messages Container */}
         <MessageList 

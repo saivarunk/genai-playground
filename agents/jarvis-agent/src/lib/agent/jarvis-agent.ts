@@ -265,3 +265,113 @@ export async function runJarvisAgent(input: string | Array<{role: string, conten
   const result = await jarvisAgent.invoke(initialState);
   return result;
 }
+
+// Helper function to run the agent with streaming
+export async function* runJarvisAgentStream(input: string | Array<{role: string, content: string, attachments?: any[]}>) {
+  let messages: BaseMessage[];
+  let files: any[] = [];
+  
+  if (typeof input === 'string') {
+    // Single message (backward compatibility)
+    messages = [new HumanMessage(input)];
+  } else {
+    // Full conversation history
+    messages = convertToLangChainMessages(input);
+    
+    // Extract files from the last message with attachments
+    const lastMessageWithFiles = input.reverse().find(msg => msg.attachments && msg.attachments.length > 0);
+    if (lastMessageWithFiles) {
+      files = lastMessageWithFiles.attachments || [];
+      console.log('Found files in conversation:', files.map(f => f.name));
+    }
+  }
+  
+  try {
+    // If we have files, use the direct Google AI client for file upload support
+    if (files.length > 0) {
+      console.log('Processing message with files for streaming:', files.length);
+      
+      // Upload files to Gemini using the new SDK
+      const fileParts = [];
+      
+      for (const file of files) {
+        if (file.path) {
+          try {
+            console.log('Uploading file to Gemini:', file.name);
+            
+            // Upload file using the new SDK
+            const uploadedFile = await genAI.files.upload({
+              file: file.path,
+              config: { 
+                mimeType: file.mimeType || 'application/pdf',
+                displayName: file.name
+              }
+            });
+            
+            console.log('File uploaded successfully:', uploadedFile.name);
+            
+            // Add the file part for the content generation
+            fileParts.push({
+              fileData: {
+                mimeType: uploadedFile.mimeType,
+                fileUri: uploadedFile.uri
+              }
+            });
+          } catch (uploadError) {
+            console.error('Error uploading file to Gemini:', uploadError);
+            yield `Error processing file: ${file.name}. `;
+          }
+        }
+      }
+      
+      // Create prompt with conversation history
+      const conversationText = messages.map(msg => {
+        if (msg instanceof HumanMessage) {
+          return `User: ${msg.content}`;
+        } else {
+          return `Assistant: ${msg.content}`;
+        }
+      }).join('\n\n');
+      
+      const textPrompt = `${SYSTEM_PROMPT}\n\nConversation:\n${conversationText}`;
+      
+      // Generate content with files using the new SDK (streaming)
+      const contents = [
+        ...fileParts,
+        { text: textPrompt }
+      ];
+      
+      const result = await genAI.models.generateContentStream({
+        model: 'gemini-2.0-flash-001',
+        contents: [{
+          role: 'user',
+          parts: contents
+        }]
+      });
+      
+      // Stream the response
+      for await (const chunk of result) {
+        const chunkText = chunk.text;
+        if (chunkText) {
+          yield chunkText;
+        }
+      }
+    } else {
+      // No files - use the standard LangChain approach with streaming
+      const systemMessage = new HumanMessage(SYSTEM_PROMPT);
+      const conversationMessages = [systemMessage, ...messages];
+      
+      // Use streaming with LangChain
+      const stream = await model.stream(conversationMessages);
+      
+      for await (const chunk of stream) {
+        if (chunk.content) {
+          yield chunk.content.toString();
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in streaming Gemini API call:", error);
+    yield "I apologize, but I'm having trouble processing your request right now. Please try again.";
+  }
+}
